@@ -34,7 +34,7 @@ export default function Slide14_DigitalAssets() {
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
-            <AWMLogo variant="dark" size="sm" />
+            <AWMLogo variant="onDark" size="sm" />
             <div className="px-3 py-1 rounded" style={{ background: 'rgba(69,172,65,0.2)', border: '1px solid #45ac41' }}>
               <span className="font-montserrat font-bold" style={{ fontSize: '10px', color: '#45ac41', letterSpacing: '0.1em' }}>
                 PRODUCTO 05

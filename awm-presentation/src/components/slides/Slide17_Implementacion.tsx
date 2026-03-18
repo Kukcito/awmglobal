@@ -84,7 +84,7 @@ export default function Slide17_Implementacion() {
               <span style={{ color: '#45ac41' }}>Del Análisis a la Ejecución</span>
             </h2>
           </div>
-          <AWMLogo variant="dark" size="sm" />
+          <AWMLogo variant="onDark" size="sm" />
         </div>
 
         <div className="h-px w-full mb-5" style={{ background: 'linear-gradient(to right, #45ac41, transparent)' }} />

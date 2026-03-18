@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -63,32 +63,42 @@ const slides = [
 
 const SLIDE_W = 1122;
 const SLIDE_H = 794;
+const TOOLBAR_H = 52;
+const BOTTOM_BAR_H = 52;
 
 export default function App() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
   const [showThumbsPanel, setShowThumbsPanel] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.7);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const totalSlides = slides.length;
   const CurrentSlideComponent = slides[currentSlide].component;
 
-  const goNext = useCallback(() => {
-    setCurrentSlide((s) => Math.min(s + 1, totalSlides - 1));
-  }, [totalSlides]);
+  // Responsive scale calculation
+  useEffect(() => {
+    const calcScale = () => {
+      const sidebarW = showThumbsPanel ? 208 : 0;
+      const availW = window.innerWidth - sidebarW - 48;
+      const availH = window.innerHeight - TOOLBAR_H - BOTTOM_BAR_H - 40;
+      const s = Math.min(availW / SLIDE_W, availH / SLIDE_H, 1);
+      setScale(Math.max(s, 0.25));
+    };
+    calcScale();
+    window.addEventListener('resize', calcScale);
+    return () => window.removeEventListener('resize', calcScale);
+  }, [showThumbsPanel]);
 
-  const goPrev = useCallback(() => {
-    setCurrentSlide((s) => Math.max(s - 1, 0));
-  }, []);
+  const goNext = useCallback(() => setCurrentSlide((s) => Math.min(s + 1, totalSlides - 1)), [totalSlides]);
+  const goPrev = useCallback(() => setCurrentSlide((s) => Math.max(s - 1, 0)), []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
-      e.preventDefault();
-      goNext();
+      e.preventDefault(); goNext();
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      goPrev();
+      e.preventDefault(); goPrev();
     }
   }, [goNext, goPrev]);
 
@@ -97,81 +107,47 @@ export default function App() {
     setPdfProgress(0);
 
     try {
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4',
-        compress: true,
-      });
-
-      // A4 landscape dimensions in mm: 297 x 210
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
       const pdfW = 297;
       const pdfH = 210;
 
-      // Create a hidden container for rendering all slides
       const hiddenContainer = document.createElement('div');
-      hiddenContainer.style.position = 'fixed';
-      hiddenContainer.style.top = '-10000px';
-      hiddenContainer.style.left = '-10000px';
-      hiddenContainer.style.width = `${SLIDE_W}px`;
-      hiddenContainer.style.zIndex = '-1';
-      hiddenContainer.style.fontFamily = "'Montserrat', sans-serif";
+      hiddenContainer.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${SLIDE_W}px;z-index:-1;font-family:'Montserrat',sans-serif;`;
       document.body.appendChild(hiddenContainer);
 
       for (let i = 0; i < slides.length; i++) {
         setPdfProgress(Math.round((i / slides.length) * 100));
 
-        // Render slide to a temporary div
         const slideDiv = document.createElement('div');
-        slideDiv.style.width = `${SLIDE_W}px`;
-        slideDiv.style.height = `${SLIDE_H}px`;
-        slideDiv.style.overflow = 'hidden';
-        slideDiv.style.position = 'relative';
+        slideDiv.style.cssText = `width:${SLIDE_W}px;height:${SLIDE_H}px;overflow:hidden;position:relative;`;
         hiddenContainer.innerHTML = '';
         hiddenContainer.appendChild(slideDiv);
 
-        // Use React's rendering via a temporary root
         const root = createRoot(slideDiv);
         const SlideComp = slides[i].component;
 
         await new Promise<void>((resolve) => {
           root.render(<SlideComp />);
-          // Wait for render + images
-          setTimeout(resolve, 800);
+          setTimeout(resolve, 900);
         });
 
         const canvas = await html2canvas(slideDiv, {
-          width: SLIDE_W,
-          height: SLIDE_H,
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          logging: false,
+          width: SLIDE_W, height: SLIDE_H, scale: 2,
+          useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false,
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.92);
-
-        if (i > 0) {
-          pdf.addPage('a4', 'landscape');
-        }
-
+        const imgData = canvas.toDataURL('image/jpeg', 0.93);
+        if (i > 0) pdf.addPage('a4', 'landscape');
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH, undefined, 'FAST');
-
         root.unmount();
       }
 
       document.body.removeChild(hiddenContainer);
-
       setPdfProgress(100);
       pdf.save('AWM_Global_Presentation_2026.pdf');
-
-      setTimeout(() => {
-        setIsGeneratingPDF(false);
-        setPdfProgress(0);
-      }, 1500);
-    } catch (error) {
-      console.error('PDF generation error:', error);
+      setTimeout(() => { setIsGeneratingPDF(false); setPdfProgress(0); }, 1500);
+    } catch (err) {
+      console.error('PDF error:', err);
       setIsGeneratingPDF(false);
       setPdfProgress(0);
     }
@@ -179,104 +155,76 @@ export default function App() {
 
   return (
     <div
-      className="flex flex-col h-screen bg-gray-900 select-none"
+      className="flex flex-col h-screen"
+      style={{ background: '#080f09', outline: 'none', fontFamily: 'Montserrat, sans-serif' }}
       onKeyDown={handleKeyDown}
       tabIndex={0}
-      style={{ outline: 'none' }}
     >
-      {/* Top toolbar */}
+      {/* ── Toolbar ─────────────────────────────────────────────────── */}
       <div
-        className="flex items-center justify-between px-6 py-3 flex-shrink-0"
-        style={{ background: '#0b1610', borderBottom: '1px solid rgba(69,172,65,0.2)' }}
+        className="flex items-center justify-between px-5 flex-shrink-0"
+        style={{ height: TOOLBAR_H, background: '#0b1610', borderBottom: '1px solid rgba(69,172,65,0.18)' }}
       >
-        {/* Left: branding */}
+        {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
-              <polygon points="50,8 90,92 68,92 50,52 32,92 10,92" fill="#45ac41" />
-              <rect x="30" y="66" width="40" height="7" fill="#12331c" />
-            </svg>
-            <span className="font-montserrat font-bold text-white text-sm tracking-widest">AWM</span>
-          </div>
-          <span className="font-montserrat font-light text-xs" style={{ color: '#459860' }}>
+          <svg width="22" height="22" viewBox="0 0 520 135" fill="none">
+            <path d="M 13,127 L 65,8 L 117,127" stroke="#ffffff" strokeWidth="22" strokeLinejoin="miter" strokeMiterlimit="20" strokeLinecap="butt" />
+            <polygon points="26,73 48,95 26,117 4,95" fill="#45ac41" />
+            <path d="M 143,8 L 170,127 L 212,46 L 254,127 L 310,8" stroke="#ffffff" strokeWidth="22" strokeLinejoin="miter" strokeMiterlimit="20" strokeLinecap="butt" />
+            <path d="M 340,127 L 350,8 L 415,73 L 480,8 L 490,127" stroke="#ffffff" strokeWidth="22" strokeLinejoin="miter" strokeMiterlimit="20" strokeLinecap="butt" />
+          </svg>
+          <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 300, fontSize: '11px', color: '#459860', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
             Corporate Presentation 2026
           </span>
         </div>
 
-        {/* Center: slide counter + navigation */}
+        {/* Navigation */}
         <div className="flex items-center gap-4">
           <button
-            onClick={goPrev}
-            disabled={currentSlide === 0}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
-            style={{
-              background: currentSlide === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(69,172,65,0.2)',
-              border: '1px solid rgba(69,172,65,0.3)',
-              color: currentSlide === 0 ? '#555' : '#45ac41',
-              cursor: currentSlide === 0 ? 'not-allowed' : 'pointer',
-            }}
+            onClick={goPrev} disabled={currentSlide === 0}
+            className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ background: currentSlide === 0 ? 'transparent' : 'rgba(69,172,65,0.15)', border: '1px solid rgba(69,172,65,0.3)', color: currentSlide === 0 ? '#333' : '#45ac41', cursor: currentSlide === 0 ? 'not-allowed' : 'pointer' }}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12">
-              <polyline points="8,2 4,6 8,10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="7,2 3,5 7,8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
 
-          <span className="font-montserrat font-medium text-sm" style={{ color: '#d7ead9', minWidth: '80px', textAlign: 'center' }}>
-            <span style={{ color: '#45ac41', fontWeight: 700 }}>{currentSlide + 1}</span>
-            <span style={{ color: '#459860' }}> / {totalSlides}</span>
+          <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', color: '#d7ead9', minWidth: '72px', textAlign: 'center' }}>
+            <strong style={{ color: '#45ac41' }}>{currentSlide + 1}</strong>
+            <span style={{ color: '#3a5a3e' }}> / {totalSlides}</span>
           </span>
 
           <button
-            onClick={goNext}
-            disabled={currentSlide === totalSlides - 1}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
-            style={{
-              background: currentSlide === totalSlides - 1 ? 'rgba(255,255,255,0.05)' : 'rgba(69,172,65,0.2)',
-              border: '1px solid rgba(69,172,65,0.3)',
-              color: currentSlide === totalSlides - 1 ? '#555' : '#45ac41',
-              cursor: currentSlide === totalSlides - 1 ? 'not-allowed' : 'pointer',
-            }}
+            onClick={goNext} disabled={currentSlide === totalSlides - 1}
+            className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ background: currentSlide === totalSlides - 1 ? 'transparent' : 'rgba(69,172,65,0.15)', border: '1px solid rgba(69,172,65,0.3)', color: currentSlide === totalSlides - 1 ? '#333' : '#45ac41', cursor: currentSlide === totalSlides - 1 ? 'not-allowed' : 'pointer' }}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12">
-              <polyline points="4,2 8,6 4,10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         </div>
 
-        {/* Right: actions */}
+        {/* Actions */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowThumbsPanel(!showThumbsPanel)}
-            className="px-3 py-1.5 rounded text-xs font-montserrat font-medium transition-all"
-            style={{
-              background: showThumbsPanel ? 'rgba(69,172,65,0.2)' : 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(69,172,65,0.3)',
-              color: showThumbsPanel ? '#45ac41' : '#d7ead9',
-            }}
+            style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 500, fontSize: '11px', padding: '6px 12px', borderRadius: '5px', background: showThumbsPanel ? 'rgba(69,172,65,0.2)' : 'rgba(255,255,255,0.04)', border: '1px solid rgba(69,172,65,0.25)', color: showThumbsPanel ? '#45ac41' : '#9ca3af', cursor: 'pointer', letterSpacing: '0.05em' }}
           >
             ☰ Diapositivas
           </button>
 
           <button
-            onClick={generatePDF}
-            disabled={isGeneratingPDF}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-montserrat font-semibold text-sm transition-all"
-            style={{
-              background: isGeneratingPDF ? '#2a6d2f' : '#45ac41',
-              color: '#ffffff',
-              cursor: isGeneratingPDF ? 'wait' : 'pointer',
-              boxShadow: '0 2px 8px rgba(69,172,65,0.3)',
-            }}
+            onClick={generatePDF} disabled={isGeneratingPDF}
+            className="flex items-center gap-2"
+            style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: '12px', padding: '7px 16px', borderRadius: '6px', background: isGeneratingPDF ? '#2a6d2f' : '#45ac41', color: '#fff', cursor: isGeneratingPDF ? 'wait' : 'pointer', border: 'none', boxShadow: '0 2px 10px rgba(69,172,65,0.35)', letterSpacing: '0.04em' }}
           >
             {isGeneratingPDF ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                {pdfProgress > 0 ? `Generando ${pdfProgress}%` : 'Preparando...'}
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {pdfProgress > 0 ? `${pdfProgress}%` : 'Iniciando…'}
               </>
             ) : (
               <>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 2v7M4 6l3 3 3-3M2 10v2h10v-2" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M6.5 1v8M4 6l2.5 3 2.5-3M1.5 10v2h10v-2" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 Descargar PDF
               </>
@@ -285,38 +233,30 @@ export default function App() {
         </div>
       </div>
 
-      {/* Main area */}
+      {/* ── Main area ───────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Thumbnails sidebar */}
+
+        {/* Thumbnail sidebar */}
         {showThumbsPanel && (
           <div
-            className="w-52 flex-shrink-0 overflow-y-auto py-4 px-3"
-            style={{ background: '#0f1f12', borderRight: '1px solid rgba(69,172,65,0.15)' }}
+            className="flex-shrink-0 overflow-y-auto py-3 px-2.5"
+            style={{ width: '208px', background: '#0a160b', borderRight: '1px solid rgba(69,172,65,0.12)' }}
           >
             {slides.map((slide, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentSlide(i)}
-                className="w-full mb-2 text-left rounded-lg overflow-hidden transition-all"
-                style={{
-                  border: i === currentSlide ? '2px solid #45ac41' : '2px solid transparent',
-                  boxShadow: i === currentSlide ? '0 0 8px rgba(69,172,65,0.4)' : 'none',
-                }}
+                className="w-full mb-1.5 text-left rounded-lg overflow-hidden"
+                style={{ border: i === currentSlide ? '1.5px solid #45ac41' : '1.5px solid transparent', outline: 'none', cursor: 'pointer' }}
               >
                 <div
-                  className="flex items-center gap-2 px-2 py-2"
-                  style={{ background: i === currentSlide ? 'rgba(69,172,65,0.15)' : 'rgba(255,255,255,0.03)' }}
+                  className="flex items-center gap-2 px-2.5 py-2"
+                  style={{ background: i === currentSlide ? 'rgba(69,172,65,0.12)' : 'rgba(255,255,255,0.02)' }}
                 >
-                  <span
-                    className="font-montserrat font-bold flex-shrink-0"
-                    style={{ fontSize: '10px', color: i === currentSlide ? '#45ac41' : '#459860', width: '20px' }}
-                  >
+                  <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: '9px', color: i === currentSlide ? '#45ac41' : '#3a5a3e', width: '18px', flexShrink: 0 }}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <span
-                    className="font-montserrat text-xs truncate"
-                    style={{ color: i === currentSlide ? '#ffffff' : '#9ca3af' }}
-                  >
+                  <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '10px', color: i === currentSlide ? '#ffffff' : '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {slide.title}
                   </span>
                 </div>
@@ -327,99 +267,102 @@ export default function App() {
 
         {/* Slide viewer */}
         <div
+          ref={wrapperRef}
           className="flex-1 flex flex-col items-center justify-center overflow-hidden"
-          style={{ background: '#111827' }}
+          style={{ background: '#0d1a0f' }}
         >
-          {/* Slide title */}
-          <div className="mb-3">
-            <span
-              className="font-montserrat font-medium text-xs tracking-widest uppercase"
-              style={{ color: '#459860' }}
-            >
-              {slides[currentSlide].title}
-            </span>
-          </div>
+          {/* Slide title label */}
+          <p style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 400, fontSize: '10px', color: '#2a6d2f', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '10px' }}>
+            {slides[currentSlide].title}
+          </p>
 
           {/* Slide */}
           <div
-            ref={containerRef}
-            className="shadow-2xl"
             style={{
               width: `${SLIDE_W}px`,
               height: `${SLIDE_H}px`,
-              transform: `scale(${Math.min(
-                (typeof window !== 'undefined' ? (window.innerWidth - (showThumbsPanel ? 208 : 0) - 60) : 1000) / SLIDE_W,
-                (typeof window !== 'undefined' ? (window.innerHeight - 120) : 600) / SLIDE_H,
-                1
-              )})`,
+              transform: `scale(${scale})`,
               transformOrigin: 'center center',
-              borderRadius: '4px',
+              borderRadius: '3px',
               overflow: 'hidden',
               flexShrink: 0,
+              boxShadow: '0 8px 48px rgba(0,0,0,0.7)',
             }}
           >
             <CurrentSlideComponent />
           </div>
 
           {/* Progress dots */}
-          <div className="flex items-center gap-1.5 mt-5">
+          <div className="flex items-center gap-1 mt-5 flex-wrap justify-center" style={{ maxWidth: '600px', padding: '0 24px' }}>
             {slides.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentSlide(i)}
-                className="rounded-full transition-all"
                 style={{
-                  width: i === currentSlide ? '20px' : '6px',
-                  height: '6px',
-                  background: i === currentSlide ? '#45ac41' : 'rgba(255,255,255,0.2)',
+                  width: i === currentSlide ? '18px' : '5px',
+                  height: '5px',
+                  borderRadius: '3px',
+                  background: i === currentSlide ? '#45ac41' : 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  transition: 'width 0.2s ease, background 0.2s ease',
                 }}
               />
             ))}
           </div>
 
-          {/* Keyboard hint */}
-          <p className="mt-3 font-montserrat text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-            Usa ← → para navegar · Espacio para avanzar
+          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '9px', color: 'rgba(255,255,255,0.18)', marginTop: '8px', letterSpacing: '0.1em' }}>
+            ← → para navegar · Espacio para avanzar
           </p>
         </div>
       </div>
 
-      {/* PDF generation overlay */}
+      {/* ── PDF overlay ─────────────────────────────────────────────── */}
       {isGeneratingPDF && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-          style={{ background: 'rgba(11, 22, 16, 0.96)' }}
+          style={{ background: 'rgba(8, 15, 9, 0.96)' }}
         >
-          <div className="flex flex-col items-center gap-6" style={{ maxWidth: '400px', width: '100%', padding: '0 32px' }}>
-            {/* AWM Logo */}
-            <svg width="60" height="60" viewBox="0 0 100 100" fill="none">
-              <polygon points="50,8 90,92 68,92 50,52 32,92 10,92" fill="#45ac41" />
-              <rect x="30" y="66" width="40" height="7" fill="#12331c" />
+          <div style={{ maxWidth: '380px', width: '100%', padding: '0 32px' }} className="flex flex-col items-center gap-6">
+            <svg width="56" height="56" viewBox="0 0 520 135" fill="none">
+              <path d="M 13,127 L 65,8 L 117,127" stroke="#ffffff" strokeWidth="22" strokeLinejoin="miter" strokeMiterlimit="20" strokeLinecap="butt" />
+              <polygon points="26,73 48,95 26,117 4,95" fill="#45ac41" />
+              <path d="M 143,8 L 170,127 L 212,46 L 254,127 L 310,8" stroke="#ffffff" strokeWidth="22" strokeLinejoin="miter" strokeMiterlimit="20" strokeLinecap="butt" />
+              <path d="M 340,127 L 350,8 L 415,73 L 480,8 L 490,127" stroke="#ffffff" strokeWidth="22" strokeLinejoin="miter" strokeMiterlimit="20" strokeLinecap="butt" />
             </svg>
 
             <div className="text-center">
-              <p className="font-montserrat font-bold text-white text-xl mb-1">Generando PDF</p>
-              <p className="font-montserrat font-light text-sm" style={{ color: '#459860' }}>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: '18px', color: '#ffffff', marginBottom: '4px' }}>
+                Generando PDF
+              </p>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 300, fontSize: '12px', color: '#459860' }}>
                 AWM Global Presentation 2026
               </p>
             </div>
 
-            {/* Progress bar */}
-            <div className="w-full">
+            <div style={{ width: '100%' }}>
               <div className="flex justify-between mb-2">
-                <span className="font-montserrat text-xs" style={{ color: '#459860' }}>Procesando diapositivas...</span>
-                <span className="font-montserrat font-bold text-xs" style={{ color: '#45ac41' }}>{pdfProgress}%</span>
+                <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '10px', color: '#459860' }}>
+                  Procesando diapositivas…
+                </span>
+                <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: '10px', color: '#45ac41' }}>
+                  {pdfProgress}%
+                </span>
               </div>
-              <div className="w-full h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }}>
+              <div style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.08)' }}>
                 <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${pdfProgress}%`, background: 'linear-gradient(to right, #2a6d2f, #45ac41)' }}
+                  style={{
+                    width: `${pdfProgress}%`, height: '100%', borderRadius: '3px',
+                    background: 'linear-gradient(to right, #2a6d2f, #45ac41)',
+                    transition: 'width 0.3s ease',
+                  }}
                 />
               </div>
             </div>
 
-            <p className="font-montserrat font-light text-xs text-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              Este proceso puede tomar 1-2 minutos.<br />Por favor no cierre esta ventana.
+            <p style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 300, fontSize: '11px', color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 1.6 }}>
+              Este proceso toma 1–2 minutos.<br />No cierre esta ventana.
             </p>
           </div>
         </div>

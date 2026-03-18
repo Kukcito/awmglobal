@@ -35,7 +35,7 @@ export default function Slide03_Problematica() {
         <div className="flex-1 flex flex-col justify-center px-12 py-8 relative">
           {/* Top bar */}
           <div className="flex items-center gap-4 mb-6">
-            <AWMLogo variant="light" size="sm" />
+            <AWMLogo variant="onLight" size="sm" />
             <div className="flex-1" />
           </div>
 

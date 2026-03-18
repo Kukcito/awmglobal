@@ -6,7 +6,7 @@ export default function Slide27_Disclaimer() {
     <SlideLayout id="slide-27" background="#ffffff">
       <div className="flex flex-col h-full px-16 py-8">
         <div className="flex items-center gap-4 mb-6">
-          <AWMLogo variant="light" size="sm" />
+          <AWMLogo variant="onLight" size="sm" />
           <div className="flex-1 h-px" style={{ background: '#d7ead9' }} />
           <p className="font-montserrat font-light" style={{ fontSize: '11px', color: '#9ca3af' }}>
             Aviso Legal y Divulgaciones

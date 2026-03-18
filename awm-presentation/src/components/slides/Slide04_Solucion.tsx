@@ -42,7 +42,7 @@ export default function Slide04_Solucion() {
               <span style={{ color: '#45ac41' }}>Gestión Patrimonial</span>
             </h2>
           </div>
-          <AWMLogo variant="dark" size="sm" />
+          <AWMLogo variant="onDark" size="sm" />
         </div>
 
         <div className="h-px w-full mb-6" style={{ background: 'linear-gradient(to right, #45ac41, transparent)' }} />

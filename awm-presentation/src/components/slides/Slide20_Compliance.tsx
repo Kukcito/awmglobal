@@ -48,7 +48,7 @@ export default function Slide20_Compliance() {
               <span style={{ color: '#45ac41' }}>Estándares Internacionales</span>
             </h2>
           </div>
-          <AWMLogo variant="dark" size="sm" />
+          <AWMLogo variant="onDark" size="sm" />
         </div>
 
         <div className="h-px w-full mb-4" style={{ background: 'linear-gradient(to right, #45ac41, transparent)' }} />

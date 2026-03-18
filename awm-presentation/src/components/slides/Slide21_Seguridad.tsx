@@ -22,7 +22,7 @@ export default function Slide21_Seguridad() {
     <SlideLayout id="slide-21" background="#ffffff">
       <div className="flex flex-col h-full px-12 py-8">
         <div className="flex items-center gap-4 mb-4">
-          <AWMLogo variant="light" size="sm" />
+          <AWMLogo variant="onLight" size="sm" />
           <div className="flex-1 h-px" style={{ background: '#d7ead9' }} />
         </div>
 

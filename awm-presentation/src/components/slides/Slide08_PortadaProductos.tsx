@@ -27,7 +27,7 @@ export default function Slide08_PortadaProductos() {
       <div className="relative z-10 flex h-full">
         {/* Left panel */}
         <div className="w-96 flex-shrink-0 flex flex-col justify-center px-14 py-10">
-          <AWMLogo variant="dark" size="md" className="mb-8" />
+          <AWMLogo variant="onDark" size="md" className="mb-8" />
 
           <p className="font-montserrat font-light uppercase tracking-widest mb-2" style={{ fontSize: '10px', color: '#459860', letterSpacing: '0.2em' }}>
             Nuestros Productos

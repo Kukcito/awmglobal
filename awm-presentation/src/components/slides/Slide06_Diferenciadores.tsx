@@ -60,7 +60,7 @@ export default function Slide06_Diferenciadores() {
               <span style={{ color: '#45ac41' }}>AWM Global?</span>
             </h2>
           </div>
-          <AWMLogo variant="dark" size="sm" />
+          <AWMLogo variant="onDark" size="sm" />
         </div>
 
         <div className="h-px w-full mb-5" style={{ background: 'linear-gradient(to right, #45ac41, transparent)' }} />

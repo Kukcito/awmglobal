@@ -49,7 +49,7 @@ export default function Slide11_NotasEstructuradas() {
         {/* Content */}
         <div className="flex-1 flex flex-col px-12 py-8">
           <div className="flex items-center gap-4 mb-4">
-            <AWMLogo variant="light" size="sm" />
+            <AWMLogo variant="onLight" size="sm" />
             <div
               className="px-3 py-1 rounded"
               style={{ background: '#12331c' }}

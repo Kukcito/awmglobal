@@ -40,7 +40,7 @@ export default function Slide19_Tecnologia() {
       <div className="flex h-full">
         <div className="flex-1 flex flex-col px-12 py-8">
           <div className="flex items-center gap-4 mb-4">
-            <AWMLogo variant="light" size="sm" />
+            <AWMLogo variant="onLight" size="sm" />
             <div className="flex-1 h-px" style={{ background: '#d7ead9' }} />
           </div>
 

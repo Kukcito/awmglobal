@@ -33,7 +33,7 @@ export default function Slide02_Principio() {
           <div className="relative z-10 max-w-4xl w-full">
             {/* Small logo top */}
             <div className="flex items-center gap-3 mb-8">
-              <AWMLogo variant="light" size="sm" />
+              <AWMLogo variant="onLight" size="sm" />
               <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, #d7ead9, transparent)' }} />
             </div>
 

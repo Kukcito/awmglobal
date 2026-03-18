@@ -50,7 +50,7 @@ export default function Slide25_Contacto() {
               <span style={{ color: '#45ac41' }}>Servirte</span>
             </h2>
           </div>
-          <AWMLogo variant="dark" size="md" />
+          <AWMLogo variant="onDark" size="md" />
         </div>
 
         <div className="h-px w-full mb-6" style={{ background: 'linear-gradient(to right, #45ac41, transparent)' }} />
